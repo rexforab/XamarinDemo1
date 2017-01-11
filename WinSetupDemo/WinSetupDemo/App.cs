@@ -5,6 +5,8 @@ using System.Text;
 using Plugin.Geolocator;
 using Plugin.Media;
 using Xamarin.Forms;
+using Newtonsoft.Json;
+using PCLStorage;
 
 namespace WinSetupDemo
 {
@@ -17,6 +19,9 @@ namespace WinSetupDemo
             Button btnLocation = new Button() { Text = "Get Location" };
             Button btnTakePhoto = new Button() { Text = "Take Photo" };
             Button btnGetPhoto = new Button() { Text = "Pick Photo" };
+            Button btnSaveData = new Button() { Text = "Save Data" };
+            Button btnLoadData = new Button() { Text = "Load Data" };
+            Label lblLoadedData = new Label() { FontSize = 20 };
 
             // Page structure (root page of application)
             var content = new ContentPage
@@ -24,7 +29,7 @@ namespace WinSetupDemo
                 Title = "Xamarin Demo",
                 Content = new StackLayout
                 {
-                    VerticalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Start,
                     Children = {
                         new Label {
                             HorizontalTextAlignment = TextAlignment.Center,
@@ -33,7 +38,10 @@ namespace WinSetupDemo
                         btnLocation,
                         lblLocation,
                         btnTakePhoto,
-                        btnGetPhoto
+                        btnGetPhoto,
+                        btnSaveData,
+                        btnLoadData,
+                        lblLoadedData
                     }
                 }
             };
@@ -104,6 +112,43 @@ namespace WinSetupDemo
             };
             // -------------------------------
 
+            // Data
+            // -------------------------------
+            btnSaveData.Clicked += async (sender, args) =>
+            {
+                var test = new TestObj()
+                {
+                    Name = "John Doe",
+                    Animal = "Cat",
+                    Time = DateTime.Now,
+                    Car = "Delorian"
+                };
+
+                string json = JsonConvert.SerializeObject(test);
+
+                IFolder rootFolder = FileSystem.Current.LocalStorage;
+                IFolder folder = await rootFolder.CreateFolderAsync("MySubFolder",
+                    CreationCollisionOption.OpenIfExists);
+                IFile file = await folder.CreateFileAsync("test.json",
+                    CreationCollisionOption.ReplaceExisting);
+                await file.WriteAllTextAsync(json);
+            };
+
+
+            btnLoadData.Clicked += async (sender, args) =>
+            {
+                IFolder rootFolder = FileSystem.Current.LocalStorage;
+                IFolder folder = await rootFolder.CreateFolderAsync("MySubFolder",
+                    CreationCollisionOption.OpenIfExists);
+                IFile file = await folder.GetFileAsync("test.json");
+                var jsonText = await file.ReadAllTextAsync();
+
+                var test = JsonConvert.DeserializeObject<TestObj>(jsonText);
+
+                lblLoadedData.Text = $"Name: { test.Name}, Time: {test.Time.TimeOfDay.ToString()}";
+            };
+            // -------------------------------
+
             #endregion
 
             MainPage = new NavigationPage(content);
@@ -128,5 +173,13 @@ namespace WinSetupDemo
         }
 
         #endregion
+    }
+
+    public class TestObj
+    {
+        public DateTime Time { get; set; }
+        public string Name { get; set; }
+        public string Car { get; set; }
+        public string Animal { get; set; }
     }
 }
